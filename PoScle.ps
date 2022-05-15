@@ -1,0 +1,272 @@
+%!PS-Adobe-3.0
+
+%% gs -q -g600x800 -r70 -dNOSAFER PoScle.ps
+
+(stdio.ps) run
+
+%font設定
+/Gothic /NimbusSans-Bold findfont def
+
+%ワードリスト読み込み
+/wordfile (wordfile.txt) (r) file def  
+
+%ワードリスト数
+/wordnum 5757 def
+
+%正解を生成
+/generate_ans {
+    %プログラム実行時間から乱数生成
+    realtime srand
+    rand wordnum mod {
+        %乱数行目の英単語取得
+        wordfile 10 string readline pop
+    } repeat
+
+    /real_answer exch def clear
+    wordfile closefile
+} def
+
+
+%箱をかくやつ
+/draw_box {
+    /color_num exch def
+    /x exch def
+    /y exch def
+
+    /x x 100 mul 50 add def
+    /y y 100 mul 150 add def
+
+    newpath
+
+    %correctに合わせて色設定
+    color_num dup dup 0 eq { 0.5 setgray } if 
+    1 eq { 0 0.9 0      setrgbcolor     } if 
+    2 eq { 0.9 0.9 0    setrgbcolor   } if
+
+
+    x y moveto
+    10 20 rmoveto
+     
+    0 60 rlineto
+    x 20 add y 80 add 10 180 90 arcn
+    
+    60 0 rlineto
+    x 80 add y 80 add 10 90 0 arcn
+
+    0 -60 rlineto
+    x 80 add y 20 add 10 360 270 arcn
+
+    -60 0 rlineto
+    x 20 add y 20 add 10 270 180 arcn
+
+    fill
+
+    stroke
+
+} def
+
+%答案の文字を表示するやつ
+/draw_answer {
+    /x exch def
+    /y exch def
+    /user_answer exch def
+
+    /x x 100 mul 50 add def
+    /y y 100 mul 150 add def
+
+    x y moveto
+    30 25 rmoveto
+    1 1 1 setrgbcolor
+    Gothic 80 scalefont setfont
+
+    %1文字ずつずらしながら印字
+    %kshowは1文字印字するたびに任意のプロセスを実行できる
+    /t 1 def
+    {
+        x y moveto 27 25 rmoveto
+        t {
+            100 0 rmoveto
+        } repeat
+        /t t 1 add def
+    } user_answer kshow clear
+    stroke
+
+} def
+
+%draw_answerとdraw_boxをいい感じに呼び出すやつ
+/draw_boxes {
+    /correct exch def
+    /user_answer exch def
+
+    line 0 ge {    
+        0 1 4 {
+            %1文字ずつfor文で処理
+            /row exch def
+
+            line row correct row get draw_box
+        } for
+
+        user_answer line 0 draw_answer
+    }{
+        %line < 0のとき、回答数オーバーなので無視
+    } ifelse
+
+    %次の行へ
+    /line line 1 sub def
+} def
+
+
+%文字が文字列内にあるどうかチェック
+/in {
+    /char exch def
+    /str exch def
+
+    %0〜(文字数-1)までfor
+    /flag false def
+    0 1 str length 1 sub {
+        str exch get char eq{
+            %同じ文字があった
+            /flag true def
+        } if
+    } for
+
+    %true falseを返す
+    flag
+} def
+
+%答案を入力するやつ
+/send_answer {
+    /user_answer exch def
+
+    %正誤を保存する配列correctを生成
+    5 array /correct exch def
+
+    user_answer length 5 eq{
+        
+        0 1 4 {
+            /num exch def
+
+            user_answer num get real_answer num get eq {
+                %正解の文字なら1
+                correct num 1 put
+            }{
+
+                real_answer user_answer num get in{
+                    %位置は違うが使われている文字なら2
+                    correct num 2 put
+                }{
+                    %ハズレは0
+                    correct num 0 put
+                } ifelse
+            } ifelse
+        } for
+
+        %箱を印字
+        user_answer correct draw_boxes
+
+        %correctが[1 1 1 1 1]なら正解
+        /judge true def
+        0 1 4 {
+            correct exch get dup 0 eq {
+                /judge false def
+            } if
+            2 eq {
+                /judge false def
+            } if
+        } for
+
+        %正解、または回答数オーバーなら正答を表示
+        judge line -1 eq or{
+            20 60 moveto
+            0 0 0 setrgbcolor
+            Gothic 30 scalefont setfont
+            (The answer is...) show
+            Gothic 60 scalefont setfont
+            300 20 moveto 
+            (") show real_answer show (") show
+            stroke
+        } if
+
+    }{
+        (Your answer isnt 5 char\n) print
+    } ifelse
+
+
+} def
+
+%文字列比較
+/strcat {
+    /str1 exch def
+    /str2 exch def
+
+    /flag true def
+
+    0 1 4 {
+        /n exch def
+        str1 n get
+        str2 n get
+        ne {
+            /flag false def
+        } if
+    } for 
+    flag
+} def
+
+
+/s {
+    /user_answer exch def
+
+    %ワードリストを見て、存在するワードかどうか調べる
+    /wordfile (wordfile.txt) (r) file def
+    {
+        %EOFまで1行ずつ読む
+        wordfile 10 string readline
+        not {
+            %一致せず端まで行ったら
+            wordfile closefile
+            (Not in word list\n) print
+            exit
+        }{
+            /word exch def
+
+            word user_answer strcat{
+                %単語がワードリストに存在したらチェックに入る
+                wordfile closefile
+                user_answer send_answer
+                exit
+            }if
+        } ifelse
+    } loop
+    clear
+} def
+
+/start { generate_ans } def
+/line 5 def
+
+
+newpath
+
+50 150 moveto
+500 0 rlineto
+-500 0 rmoveto
+6 {
+    0 100 rmoveto
+    500 0 rlineto
+    -500 0 rmoveto
+} repeat
+
+50 150 moveto
+0 600 rlineto
+0 -600 rmoveto
+5 {
+    100 0 rmoveto
+    0 600 rlineto
+    0 -600 rmoveto
+} repeat
+
+stroke
+
+%startでゲームスタート、ここに書かない方が実行時間がずれて乱数がいい感じになるかも
+start
+
+(send your answer like:\n  (answer) s\n) print
