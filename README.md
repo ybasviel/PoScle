@@ -1,4 +1,8 @@
 # PoScle
+## About
+
+https://github.com/user-attachments/assets/45b2f1b8-a707-4be1-b577-c211b3bfd05b
+
 
 ## Prepare
 
